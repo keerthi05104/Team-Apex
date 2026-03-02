@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Resonance Chamber</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Sans:wght@200;300;400&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --teal:#4dd9c0;--teal2:#2ab8a0;--teal-dim:rgba(77,217,192,0.15);
+      --gold:#f0c060;--gold-glow:rgba(240,192,96,0.4);
+      --glass:rgba(255,255,255,0.04);--glass-border:rgba(255,255,255,0.08);
+      --text:#c8dce8;--text-dim:rgba(200,220,232,0.5);
+    }
+    body{
+      min-height:100vh;
+      background:radial-gradient(ellipse at 30% 20%,#051a2e 0%,#020810 50%,#030d1a 100%);
+      font-family:'DM Sans',sans-serif;color:var(--text);
+      display:flex;flex-direction:column;align-items:center;
+      overflow-x:hidden;position:relative;
+    }
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:radial-gradient(circle at 15% 85%,rgba(77,217,192,0.04) 0%,transparent 40%),
+                 radial-gradient(circle at 85% 15%,rgba(77,170,217,0.05) 0%,transparent 40%);}
+
+    /* STARS */
+    .stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+    .star{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(200,220,232,0.3);
+          animation:twinkle var(--d,4s) ease-in-out infinite var(--delay,0s);}
+    @keyframes twinkle{0%,100%{opacity:0.1;}50%{opacity:0.6;}}
+
+    /* BREATHE RING */
+    .breathe-ring{position:fixed;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;
+      justify-content:center;opacity:0;transition:opacity 1s;}
+    .breathe-ring.active{opacity:1;}
+    .breathe-ring::before{content:'';width:600px;height:600px;border-radius:50%;
+      border:1px solid rgba(77,217,192,0.04);animation:breathe-expand 4s ease-in-out infinite;}
+    @keyframes breathe-expand{0%,100%{transform:scale(0.9);opacity:0.3;}50%{transform:scale(1.15);opacity:0.7;}}
+
+    /* ══ ONBOARDING ══ */
+    #onboarding{position:fixed;inset:0;z-index:100;background:rgba(2,8,16,0.97);
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:32px 24px;text-align:center;transition:opacity 0.7s,transform 0.7s;}
+    #onboarding.out{opacity:0;transform:scale(1.05);pointer-events:none;}
+    .ob-logo{font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:300;
+      letter-spacing:0.15em;color:#e0eff8;margin-bottom:4px;}
+    .ob-logo span{color:var(--teal);}
+    .ob-tag{font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-dim);margin-bottom:32px;}
+    .ob-steps{display:flex;flex-direction:column;gap:14px;width:100%;max-width:340px;margin-bottom:32px;}
+    .ob-step{display:flex;align-items:flex-start;gap:14px;text-align:left;
+      background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:14px 16px;}
+    .ob-icon{font-size:1.5rem;flex-shrink:0;margin-top:1px;}
+    .ob-step-title{font-size:0.82rem;font-weight:400;color:var(--text);margin-bottom:3px;}
+    .ob-step-desc{font-size:0.71rem;color:var(--text-dim);line-height:1.5;}
+    .ob-btn{background:linear-gradient(135deg,rgba(77,217,192,0.2),rgba(77,217,192,0.07));
+      border:1px solid rgba(77,217,192,0.4);border-radius:50px;
+      color:var(--teal);font-size:0.85rem;letter-spacing:0.12em;padding:14px 44px;
+      cursor:pointer;box-shadow:0 0 24px rgba(77,217,192,0.15);
+      transition:all 0.25s;font-family:'DM Sans',sans-serif;font-weight:300;}
+    .ob-btn:hover{box-shadow:0 0 36px rgba(77,217,192,0.28);}
+
+    /* ══ MAIN APP ══ */
+    .main-app{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;
+      width:100%;max-width:440px;padding:18px 18px 40px;opacity:0;transition:opacity 0.8s;display:none;}
+    .main-app.vis{opacity:1;}
+
+    .header{text-align:center;margin-bottom:14px;}
+    .header h1{font-family:'Cormorant Garamond',serif;font-weight:300;
+      font-size:clamp(1.8rem,5vw,2.3rem);letter-spacing:0.12em;color:#e0eff8;line-height:1;}
+    .header h1 span{color:var(--teal);}
+    .header p{font-size:0.67rem;letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--text-dim);margin-top:5px;font-weight:200;}
+
+    .mood-badge{display:inline-flex;align-items:center;gap:7px;
+      background:var(--glass);border:1px solid var(--glass-border);border-radius:50px;
+      padding:6px 14px;font-size:0.7rem;color:var(--text-dim);margin-bottom:14px;
+      cursor:pointer;transition:all 0.2s;}
+    .mood-badge:hover{border-color:rgba(77,217,192,0.3);color:var(--text);}
+    .mb-emoji{font-size:1rem;}
+
+    .status{font-size:0.77rem;letter-spacing:0.05em;color:var(--text-dim);text-align:center;
+      min-height:22px;margin-bottom:18px;transition:color 0.4s;padding:0 12px;}
+    .status.on{color:var(--teal);}
+
+    /* CIRCLE */
+    .circle-wrap{position:relative;display:flex;flex-direction:column;align-items:center;margin-bottom:20px;}
+    .orbit-ring{position:absolute;width:320px;height:320px;border-radius:50%;
+      border:1px solid rgba(77,217,192,0.06);animation:ospin 20s linear infinite;
+      pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);}
+    .orbit-ring::before{content:'';position:absolute;top:-3px;left:50%;width:6px;height:6px;
+      border-radius:50%;background:var(--teal);opacity:0.5;transform:translateX(-50%);
+      box-shadow:0 0 8px var(--teal);}
+    @keyframes ospin{from{transform:translate(-50%,-50%) rotate(0);}to{transform:translate(-50%,-50%) rotate(360deg);}}
+    .circle{width:256px;height:256px;border-radius:50%;
+      background:radial-gradient(circle at 38% 35%,rgba(77,217,192,0.18) 0%,rgba(7,20,36,0.95) 55%,rgba(2,8,16,0.98) 100%);
+      border:1px solid rgba(77,217,192,0.2);display:flex;flex-direction:column;align-items:center;
+      justify-content:center;cursor:pointer;user-select:none;position:relative;
+      box-shadow:0 0 40px rgba(77,217,192,0.08),inset 0 0 40px rgba(77,217,192,0.04);
+      animation:float 5s ease-in-out infinite;transition:box-shadow 0.3s;
+      -webkit-tap-highlight-color:transparent;}
+    @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+    .circle:hover{box-shadow:0 0 60px rgba(77,217,192,0.14),inset 0 0 50px rgba(77,217,192,0.06);}
+    .circle.holding{animation:float 5s ease-in-out infinite,phold 1.2s ease-in-out infinite;border-color:rgba(240,192,96,0.5);}
+    @keyframes phold{
+      0%,100%{box-shadow:0 0 0 8px rgba(240,192,96,0.2),0 0 80px var(--gold-glow),inset 0 0 60px rgba(240,192,96,0.06);}
+      50%{box-shadow:0 0 0 22px rgba(240,192,96,0.06),0 0 100px var(--gold-glow),inset 0 0 70px rgba(240,192,96,0.08);}}
+    .circle-text{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300;
+      letter-spacing:0.12em;color:rgba(200,220,232,0.85);pointer-events:none;text-align:center;}
+    .circle-sub{font-size:0.61rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);
+      margin-top:8px;pointer-events:none;}
+    .cir-ring{position:absolute;border-radius:50%;border:1px solid rgba(77,217,192,0.1);pointer-events:none;}
+    .cr1{width:185px;height:185px;}.cr2{width:120px;height:120px;border-color:rgba(77,217,192,0.06);}
+    .mic-lbl{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:12px;opacity:0.3;}
+    .mic-lbl svg{width:14px;height:14px;stroke:var(--teal);fill:none;stroke-width:1.5;}
+    .mic-lbl span{font-size:0.59rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);}
+
+    /* SESSION BAR */
+    .session-bar{width:100%;background:var(--glass);border:1px solid var(--glass-border);
+      border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+    .breath-guide{flex:1;display:flex;flex-direction:column;gap:5px;}
+    .breath-lbl{font-size:0.61rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);}
+    .breath-phase{font-size:0.88rem;color:var(--teal);font-weight:300;letter-spacing:0.06em;min-height:22px;transition:all 0.4s;}
+    .breath-bar-wrap{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .breath-bar{height:100%;background:linear-gradient(90deg,var(--teal2),var(--teal));border-radius:2px;width:0%;}
+    .timer-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+    .timer-lbl{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);}
+    .timer-val{font-family:'Cormorant Garamond',serif;font-size:1.55rem;font-weight:300;color:var(--teal);line-height:1;}
+    .dur-btns{display:flex;gap:5px;}
+    .dur-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+      border-radius:8px;padding:4px 9px;cursor:pointer;font-size:0.63rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--text-dim);transition:all 0.2s;}
+    .dur-btn:hover,.dur-btn.act{background:rgba(77,217,192,0.1);border-color:rgba(77,217,192,0.3);color:var(--teal);}
+
+    /* FREQ PANEL */
+    .panel{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;
+      padding:18px 18px 16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.06);margin-bottom:12px;}
+    .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+    .plbl{font-size:0.61rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-dim);}
+    .freq-val{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:300;color:var(--teal);letter-spacing:0.05em;line-height:1;}
+    .freq-val span{font-size:0.7rem;letter-spacing:0.15em;color:var(--text-dim);margin-left:3px;}
+    .slw{margin-bottom:14px;}
+    input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;
+      background:rgba(255,255,255,0.08);outline:none;cursor:pointer;}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+      border-radius:50%;background:radial-gradient(circle,var(--teal),var(--teal2));
+      box-shadow:0 0 12px rgba(77,217,192,0.6);cursor:pointer;}
+    input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;
+      background:var(--teal);border:none;cursor:pointer;}
+    .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
+    .pbtn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;
+      padding:7px 4px;cursor:pointer;text-align:center;transition:all 0.22s;color:var(--text-dim);}
+    .pbtn:hover{background:var(--teal-dim);border-color:rgba(77,217,192,0.3);color:var(--teal);}
+    .pbtn.act{background:rgba(77,217,192,0.12);border-color:rgba(77,217,192,0.4);color:var(--teal);}
+    .pn{display:block;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;}
+    .ph2{display:block;font-family:'Cormorant Garamond',serif;font-size:0.86rem;}
+    .pd{display:block;font-size:0.51rem;opacity:0.55;margin-top:1px;}
+    .wave-row{display:flex;align-items:center;gap:12px;}
+    .play-btn{width:44px;height:44px;border-radius:50%;background:rgba(77,217,192,0.1);
+      border:1px solid rgba(77,217,192,0.3);cursor:pointer;display:flex;align-items:center;
+      justify-content:center;font-size:1rem;flex-shrink:0;transition:all 0.22s;color:var(--teal);}
+    .play-btn:hover{background:rgba(77,217,192,0.2);box-shadow:0 0 20px rgba(77,217,192,0.25);}
+    .play-btn.on{background:rgba(77,217,192,0.15);box-shadow:0 0 24px rgba(77,217,192,0.3);}
+    .wbars{display:flex;align-items:center;gap:4px;height:36px;flex:1;}
+    .bar{flex:1;border-radius:3px;background:rgba(77,217,192,0.3);height:4px;transition:background 0.5s;}
+    .wbars.on .bar{animation:wpulse var(--spd,1.5s) ease-in-out infinite;}
+    .bar:nth-child(1){--h:60%;animation-delay:0s;}.bar:nth-child(2){--h:90%;animation-delay:.15s;}
+    .bar:nth-child(3){--h:100%;animation-delay:.3s;}.bar:nth-child(4){--h:85%;animation-delay:.45s;}
+    .bar:nth-child(5){--h:55%;animation-delay:.6s;}
+    @keyframes wpulse{0%,100%{height:4px;opacity:0.4;}50%{height:var(--h,70%);opacity:1;}}
+    .vol-row{display:flex;align-items:center;gap:10px;margin-top:12px;
+      padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);}
+    .vol-ico{font-size:0.9rem;opacity:0.5;flex-shrink:0;}
+    .vol-pct{font-size:0.67rem;color:var(--text-dim);min-width:30px;text-align:right;
+      font-family:'Cormorant Garamond',serif;}
+
+    /* SAVED */
+    .saved-panel{width:100%;background:var(--glass);border:1px solid var(--glass-border);
+      border-radius:16px;padding:13px 15px;backdrop-filter:blur(10px);margin-bottom:12px;}
+    .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+    .slbl{font-size:0.61rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);}
+    .save-btn{font-size:0.63rem;background:rgba(77,217,192,0.07);border:1px solid rgba(77,217,192,0.22);
+      border-radius:20px;padding:4px 11px;color:var(--teal);cursor:pointer;transition:all 0.2s;letter-spacing:0.06em;}
+    .save-btn:hover{background:rgba(77,217,192,0.14);}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;min-height:26px;}
+    .chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.09);border-radius:20px;padding:5px 10px;
+      font-size:0.67rem;color:var(--text-dim);cursor:pointer;transition:all 0.2s;}
+    .chip:hover{background:rgba(77,217,192,0.08);border-color:rgba(77,217,192,0.3);color:var(--teal);}
+    .cdel{opacity:0.35;font-size:0.78rem;line-height:1;padding-left:2px;}
+    .cdel:hover{opacity:1;color:#ff7070;}
+    .no-saved{font-size:0.68rem;color:var(--text-dim);opacity:0.45;font-style:italic;}
+
+    /* POST MOOD */
+    #postScreen{position:fixed;inset:0;z-index:99;background:rgba(2,8,16,0.97);
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:28px;text-align:center;opacity:0;pointer-events:none;transition:opacity 0.7s;}
+    #postScreen.vis{opacity:1;pointer-events:auto;}
+    .post-title{font-family:'Cormorant Garamond',serif;font-size:1.85rem;font-weight:300;
+      letter-spacing:0.08em;color:#e0eff8;margin-bottom:5px;}
+    .post-sub{font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;
+      color:var(--text-dim);margin-bottom:24px;}
+    .compare{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;width:100%;max-width:360px;}
+    .cblock{text-align:center;flex-shrink:0;}
+    .cbig{font-size:2.4rem;display:block;}
+    .clbl{font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-top:4px;}
+    .carrow{font-size:1.4rem;color:var(--teal);opacity:0.6;padding-top:8px;}
+    .shift-msg{font-size:0.9rem;color:var(--teal);letter-spacing:0.04em;margin-bottom:24px;min-height:22px;line-height:1.5;}
+    .post-btn{background:rgba(77,217,192,0.1);border:1px solid rgba(77,217,192,0.35);
+      border-radius:50px;color:var(--teal);font-size:0.8rem;letter-spacing:0.12em;
+      padding:12px 32px;cursor:pointer;transition:all 0.25s;font-family:'DM Sans',sans-serif;}
+    .post-btn:hover{box-shadow:0 0 24px rgba(77,217,192,0.2);}
+
+    .footer{margin-top:18px;font-size:0.57rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:rgba(200,220,232,0.14);text-align:center;}
+  </style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="breathe-ring" id="breatheRing"></div>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-logo">Resonance <span>Chamber</span></div>
+  <div class="ob-tag">a 3-minute stress reset · no typing needed</div>
+  <div class="ob-steps">
+    <div class="ob-step">
+      <div class="ob-icon">🫀</div>
+      <div><div class="ob-step-title">Hold &amp; Release</div>
+        <div class="ob-step-desc">Press and hold the glowing circle to release what you're carrying. Let go when you're ready.</div></div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-icon">🎵</div>
+      <div><div class="ob-step-title">Hear Your Frequency</div>
+        <div class="ob-step-desc">Tap ▶ to start real isochronic beats at your chosen brainwave frequency. Headphones recommended.</div></div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-icon">🌬️</div>
+      <div><div class="ob-step-title">Follow the Breath Guide</div>
+        <div class="ob-step-desc">A gentle 4-7-8 breath pattern guides you. Just follow along — no effort required.</div></div>
+    </div>
+  </div>
+  <button class="ob-btn" onclick="startOnboarding()">I'm ready · begin</button>
+</div>
+
+<!-- POST-SESSION MOOD -->
+<div id="postScreen">
+  <div class="post-title">Session Complete ✨</div>
+  <div class="post-sub">you showed up for yourself</div>
+  <div class="compare">
+    <div class="cblock"><span class="cbig" id="preEmojiPost">💭</span><div class="clbl">Before</div></div>
+    <div class="carrow">→</div>
+    <div style="flex:1">
+      <div class="mood-grid" style="grid-template-columns:repeat(3,1fr);" id="postMoodGrid">
+        <button class="mood-btn" onclick="pickMood('😌','Calmer',this)"><span class="mood-emoji">😌</span><span class="mood-label">Calmer</span></button>
+        <button class="mood-btn" onclick="pickMood('🙂','Better',this)"><span class="mood-emoji">🙂</span><span class="mood-label">Better</span></button>
+        <button class="mood-btn" onclick="pickMood('😊','Peaceful',this)"><span class="mood-emoji">😊</span><span class="mood-label">Peaceful</span></button>
+        <button class="mood-btn" onclick="pickMood('😐','Same',this)"><span class="mood-emoji">😐</span><span class="mood-label">Same</span></button>
+        <button class="mood-btn" onclick="pickMood('🥱','Drowsy',this)"><span class="mood-emoji">🥱</span><span class="mood-label">Drowsy</span></button>
+        <button class="mood-btn" onclick="pickMood('✨','Lighter',this)"><span class="mood-emoji">✨</span><span class="mood-label">Lighter</span></button>
+      </div>
+      <div class="clbl" style="margin-top:8px;">After — tap to select</div>
+    </div>
+  </div>
+  <div class="shift-msg" id="shiftMsg"></div>
+  <button class="post-btn" onclick="restartSession()">Begin another session</button>
+</div>
+
+<!-- MAIN APP -->
+<div class="main-app" id="mainApp">
+  <div class="header">
+    <h1>Resonance <span>Chamber</span></h1>
+    <p>frequency · breath · release</p>
+  </div>
+
+  <div class="status" id="status">hold the circle to release what you're carrying</div>
+
+  <!-- CIRCLE -->
+  <div class="circle-wrap">
+    <div class="orbit-ring"></div>
+    <div class="circle" id="circle"
+         onmousedown="holdStart()" onmouseup="holdEnd()" onmouseleave="holdEnd()"
+         ontouchstart="holdStart(event)" ontouchend="holdEnd(event)">
+      <div class="cir-ring cr1"></div>
+      <div class="cir-ring cr2"></div>
+      <div class="circle-text" id="ctext">hold &amp; release</div>
+      <div class="circle-sub" id="csub">breathe</div>
+    </div>
+    <div class="mic-lbl">
+      <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+      <span>voice in</span>
+    </div>
+  </div>
+
+  <!-- SESSION BAR -->
+  <div class="session-bar">
+    <div class="breath-guide">
+      <div class="breath-lbl">breath guide · 4-7-8</div>
+      <div class="breath-phase" id="bphase">press ▶ to begin</div>
+      <div class="breath-bar-wrap"><div class="breath-bar" id="bbar"></div></div>
+    </div>
+    <div class="timer-side">
+      <div>
+        <div class="timer-lbl">session</div>
+        <div class="timer-val" id="timerVal">3:00</div>
+      </div>
+      <div class="dur-btns">
+        <button class="dur-btn act" id="d3" onclick="setDur(3,this)">3m</button>
+        <button class="dur-btn" id="d5" onclick="setDur(5,this)">5m</button>
+        <button class="dur-btn" id="d10" onclick="setDur(10,this)">10m</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FREQ PANEL -->
+  <div class="panel">
+    <div class="ph">
+      <div class="plbl">calming frequency</div>
+      <div class="freq-val" id="freqVal">8.0<span>Hz</span></div>
+    </div>
+    <div class="slw">
+      <input type="range" id="fslider" min="0.5" max="12" step="0.1" value="8" oninput="onSlider(this.value)"/>
+    </div>
+    <div class="presets">
+      <button class="pbtn" onclick="setPreset(4,this)"><span class="pn">Delta</span><span class="ph2">4 Hz</span><span class="pd">deep sleep</span></button>
+      <button class="pbtn act" onclick="setPreset(8,this)"><span class="pn">Theta</span><span class="ph2">8 Hz</span><span class="pd">meditation</span></button>
+      <button class="pbtn" onclick="setPreset(10,this)"><span class="pn">Alpha</span><span class="ph2">10 Hz</span><span class="pd">calm focus</span></button>
+      <button class="pbtn" onclick="setPreset(12,this)"><span class="pn">Beta</span><span class="ph2">12 Hz</span><span class="pd">alert</span></button>
+    </div>
+    <div class="wave-row">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+      <div class="wbars" id="wbars">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div>
+      </div>
+    </div>
+    <div class="vol-row">
+      <span class="vol-ico">🔈</span>
+      <input type="range" id="vslider" min="0" max="100" value="60" oninput="onVol(this.value)"/>
+      <span class="vol-pct" id="vPct">60%</span>
+    </div>
+  </div>
+
+  <!-- SAVED FREQS -->
+  <div class="saved-panel">
+    <div class="sh">
+      <div class="slbl">📌 saved frequencies</div>
+      <button class="save-btn" onclick="saveFreq()">+ save current</button>
+    </div>
+    <div class="chips" id="chips"><span class="no-saved">None saved yet</span></div>
+  </div>
+
+  <div class="footer">resonance chamber · a micro-intervention for anxious moments</div>
+</div>
+
+<script>
+// ── STATE ──
+let holding=false,playing=false,freq=8.0,vol=60;
+let durMin=3,sessElapsed=0,sessInt=null;
+let breathTimer=null,breathIdx=0;
+let saved=[];
+
+// Breath cycles: 4-7-8 technique
+const BREATH=[
+  {txt:'inhale…',dur:4000,color:'var(--teal)'},
+  {txt:'hold',dur:7000,color:'var(--gold)'},
+  {txt:'exhale…',dur:8000,color:'#7eb8d4'}
+];
+
+// ── STARS ──
+const SE=document.getElementById('stars');
+for(let i=0;i<75;i++){const s=document.createElement('div');s.className='star';
+  s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${3+Math.random()*5}s;--delay:-${Math.random()*6}s;`;SE.appendChild(s);}
+
+// ── ONBOARDING ──
+function startOnboarding(){
+  const el=document.getElementById('onboarding');
+  el.classList.add('out');
+  setTimeout(()=>{el.style.display='none';showApp();},700);
+}
+
+// ── MOOD ──
+function pickMood(emoji,label,btn){
+  document.querySelectorAll('#postMoodGrid .mood-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const msgs={Calmer:'You moved from tension to stillness. 🌊',Better:'Something shifted. That matters. ✨',
+    Peaceful:'The frequencies found you. 💚',Same:'Showing up is the whole practice. 🙏',
+    Drowsy:'Your nervous system is deeply resting. 🌙',Lighter:'You set something down today. 🕊️'};
+  document.getElementById('shiftMsg').textContent=msgs[label]||'Something changed today.';
+  if(navigator.vibrate)navigator.vibrate(40);
+}
+function showApp(){
+  const app=document.getElementById('mainApp');
+  app.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>app.classList.add('vis')));
+  loadSaved();
+}
+
+// ── AUDIO ENGINE ──
+let actx=null,carrier=null,gate=null,ambient=null,ambGain=null,masterG=null,filt=null,beatTmr=null;
+
+function initAudio(){
+  if(actx)return;
+  actx=new(window.AudioContext||window.webkitAudioContext)();
+  masterG=actx.createGain();masterG.gain.value=0;
+  filt=actx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=920;filt.Q.value=0.7;
+  carrier=actx.createOscillator();carrier.type='sine';carrier.frequency.value=174;
+  gate=actx.createGain();gate.gain.value=0;
+  ambient=actx.createOscillator();ambient.type='sine';ambient.frequency.value=285;
+  ambGain=actx.createGain();ambGain.gain.value=0.2;
+  carrier.connect(gate);gate.connect(filt);
+  ambient.connect(ambGain);ambGain.connect(filt);
+  filt.connect(masterG);masterG.connect(actx.destination);
+  carrier.start();ambient.start();
+}
+function startGate(hz){
+  clearTimeout(beatTmr);beatTmr=null;
+  const pms=1000/hz,on=pms*0.45;
+  function p(){
+    if(!playing||!gate)return;
+    const t=actx.currentTime;
+    gate.gain.cancelScheduledValues(t);
+    gate.gain.setValueAtTime(0,t);
+    gate.gain.linearRampToValueAtTime(1,t+0.008);
+    gate.gain.setValueAtTime(1,t+on/1000-0.008);
+    gate.gain.linearRampToValueAtTime(0,t+on/1000);
+    beatTmr=setTimeout(p,pms);
+  }p();
+}
+function stopGate(){
+  clearTimeout(beatTmr);beatTmr=null;
+  if(gate){gate.gain.cancelScheduledValues(actx.currentTime);gate.gain.setValueAtTime(0,actx.currentTime);}
+}
+function startAudio(){
+  initAudio();
+  if(actx.state==='suspended')actx.resume();
+  const v=(vol/100)*0.3;
+  masterG.gain.cancelScheduledValues(actx.currentTime);
+  masterG.gain.setValueAtTime(masterG.gain.value,actx.currentTime);
+  masterG.gain.linearRampToValueAtTime(v,actx.currentTime+1.1);
+  startGate(freq);
+}
+function stopAudio(){
+  if(!actx)return;stopGate();
+  masterG.gain.cancelScheduledValues(actx.currentTime);
+  masterG.gain.setValueAtTime(masterG.gain.value,actx.currentTime);
+  masterG.gain.linearRampToValueAtTime(0,actx.currentTime+0.8);
+}
+function onVol(v){
+  vol=parseInt(v);document.getElementById('vPct').textContent=v+'%';
+  if(actx&&masterG&&playing)masterG.gain.setValueAtTime((vol/100)*0.3,actx.currentTime);
+}
+
+// ── SESSION TIMER ──
+function setDur(m,btn){
+  durMin=m;
+  document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  if(!playing){sessElapsed=0;updateTimer();}
+}
+function startTimer(){sessElapsed=0;updateTimer();
+  sessInt=setInterval(()=>{sessElapsed++;updateTimer();if(sessElapsed>=durMin*60)endSession();},1000);}
+function stopTimer(){clearInterval(sessInt);sessInt=null;}
+function updateTimer(){
+  const rem=Math.max(0,durMin*60-sessElapsed);
+  const m=Math.floor(rem/60),s=rem%60;
+  document.getElementById('timerVal').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+}
+function endSession(){
+  stopTimer();stopAudio();stopBreath();
+  playing=false;
+  document.getElementById('playBtn').textContent='▶';
+  document.getElementById('playBtn').classList.remove('on');
+  document.getElementById('wbars').classList.remove('on');
+  document.getElementById('breatheRing').classList.remove('active');
+  updateBars();
+  setTimeout(()=>document.getElementById('postScreen').classList.add('vis'),900);
+}
+
+// ── BREATH GUIDE ──
+function startBreath(){breathIdx=0;runBreath();}
+function runBreath(){
+  if(!playing)return;
+  const c=BREATH[breathIdx];
+  const ph=document.getElementById('bphase');
+  const bb=document.getElementById('bbar');
+  ph.textContent=c.txt;ph.style.color=c.color;
+  bb.style.transition='none';bb.style.width='0%';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    bb.style.transition=`width ${c.dur}ms linear`;bb.style.width='100%';
+  }));
+  breathTimer=setTimeout(()=>{breathIdx=(breathIdx+1)%BREATH.length;runBreath();},c.dur);
+}
+function stopBreath(){
+  clearTimeout(breathTimer);breathTimer=null;
+  document.getElementById('bphase').textContent='press ▶ to begin';
+  document.getElementById('bphase').style.color='var(--teal)';
+  document.getElementById('bbar').style.width='0%';
+  document.getElementById('bbar').style.transition='none';
+}
+
+// ── CIRCLE ──
+const circEl=document.getElementById('circle');
+const ctxt=document.getElementById('ctext');
+const csub=document.getElementById('csub');
+const statusEl=document.getElementById('status');
+
+function holdStart(e){
+  if(e)e.preventDefault();if(holding)return;holding=true;
+  circEl.classList.add('holding');ctxt.textContent='🎤 listening…';csub.textContent='';
+  statusEl.textContent='🌀 voice captured · analyzing stress patterns';statusEl.classList.add('on');
+  if(navigator.vibrate)navigator.vibrate([25,15,25]);
+}
+function holdEnd(e){
+  if(e)e.preventDefault();if(!holding)return;holding=false;
+  circEl.classList.remove('holding');ctxt.textContent='✨ released';csub.textContent='';
+  statusEl.textContent='✨ voice processed · frequency attuned to you';
+  if(navigator.vibrate)navigator.vibrate(60);
+  const nf=Math.round(Math.min(12,Math.max(0.5,freq+(Math.random()*1.6-0.8)))*10)/10;
+  setFreq(nf,false);
+  setTimeout(()=>{
+    ctxt.innerHTML='hold &amp; release';csub.textContent='breathe';
+    if(!playing){statusEl.textContent="hold the circle to release what you're carrying";statusEl.classList.remove('on');}
+  },2200);
+}
+
+// ── FREQ ──
+function setFreq(v,fromSlider){
+  freq=v;
+  document.getElementById('freqVal').innerHTML=v.toFixed(1)+'<span>Hz</span>';
+  if(!fromSlider)document.getElementById('fslider').value=v;
+  document.getElementById('wbars').style.setProperty('--spd',Math.max(0.3,1.8-(v/12)*1.2)+'s');
+  updateBars();
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('act'));
+  const pm={4:0,8:1,10:2,12:3};const idx=pm[Math.round(v)];
+  if(idx!==undefined)document.querySelectorAll('.pbtn')[idx]?.classList.add('act');
+  if(playing&&actx)startGate(v);
+  if(playing){statusEl.textContent=`▶ playing ${v.toFixed(1)} Hz isochronic beats · breathe with the pulse`;statusEl.classList.add('on');}
+}
+function updateBars(){
+  const hue=Math.round(160+(freq/12)*24);
+  document.querySelectorAll('.bar').forEach(b=>{
+    b.style.background=playing?`hsla(${hue},70%,65%,0.8)`:`hsla(${hue},50%,55%,0.3)`;
+  });
+}
+function onSlider(v){setFreq(parseFloat(v),true);}
+function setPreset(hz,btn){setFreq(hz,false);}
+
+// ── PLAY/PAUSE ──
+function togglePlay(){
+  playing=!playing;
+  const pb=document.getElementById('playBtn');
+  pb.textContent=playing?'⏸':'▶';pb.classList.toggle('on',playing);
+  document.getElementById('wbars').classList.toggle('on',playing);
+  document.getElementById('breatheRing').classList.toggle('active',playing);
+  updateBars();
+  if(playing){
+    startAudio();startTimer();startBreath();
+    statusEl.textContent=`▶ playing ${freq.toFixed(1)} Hz isochronic beats · breathe with the pulse`;
+    statusEl.classList.add('on');
+    if(navigator.vibrate)navigator.vibrate([15,10,15]);
+  }else{
+    stopAudio();stopTimer();stopBreath();
+    statusEl.textContent="hold the circle to release what you're carrying";
+    statusEl.classList.remove('on');
+  }
+}
+
+// ── SAVED FREQS ──
+function loadSaved(){
+  try{const r=sessionStorage.getItem('rc_saved2');if(r)saved=JSON.parse(r);}catch(e){}
+  renderChips();
+}
+function persists(){try{sessionStorage.setItem('rc_saved2',JSON.stringify(saved));}catch(e){}}
+function saveFreq(){
+  if(saved.find(f=>f.hz===freq))return;
+  saved.push({hz:freq});persists();renderChips();
+  if(navigator.vibrate)navigator.vibrate(50);
+}
+function delFreq(hz,e){e.stopPropagation();saved=saved.filter(f=>f.hz!==hz);persists();renderChips();}
+function renderChips(){
+  const w=document.getElementById('chips');
+  if(!saved.length){w.innerHTML='<span class="no-saved">None saved yet</span>';return;}
+  w.innerHTML=saved.map(f=>`<div class="chip" onclick="setFreq(${f.hz},false)">${f.hz.toFixed(1)} Hz<span class="cdel" onclick="delFreq(${f.hz},event)">✕</span></div>`).join('');
+}
+
+// ── POST SESSION ──
+function restartSession(){
+  document.getElementById('postScreen').classList.remove('vis');
+  document.querySelectorAll('#postMoodGrid .mood-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('shiftMsg').textContent='';
+  sessElapsed=0;updateTimer();
+  playing=false;
+  document.getElementById('playBtn').textContent='▶';
+  document.getElementById('playBtn').classList.remove('on');
+  document.getElementById('wbars').classList.remove('on');
+  document.getElementById('breatheRing').classList.remove('active');
+  statusEl.textContent="hold the circle to release what you're carrying";
+  statusEl.classList.remove('on');
+  updateBars();
+}
+
+// ── INIT ──
+setFreq(8.0,false);updateTimer();
+document.getElementById('mainApp').style.display='none';
+</script>
+</body>
+</html>
